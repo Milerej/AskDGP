@@ -1,8 +1,5 @@
 streamlit
-hmac
-os
 pandas
 openai
 boto3
-load_dotenv
-StringIO
+python-dotenv
