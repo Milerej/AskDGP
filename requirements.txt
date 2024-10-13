@@ -1,5 +1,6 @@
 streamlit
 pandas
-openai
+#openai
 boto3
 python-dotenv
+openai==0.28.0
