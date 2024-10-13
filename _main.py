@@ -210,7 +210,7 @@ elif page == "About Us":
 # Content for Methodology
 elif page == "Methodology":
     st.title("Methodology")
-    st.image('C:/Users/jerel/Desktop/AI Bootcamp POC - DGP Chatbot/venv/Flow1.PNG')
+    st.image('Flow1.PNG')
 
     st.write('''
     Use Case 1:
