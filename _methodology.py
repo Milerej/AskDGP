@@ -3,6 +3,13 @@ from PIL import Image
 import cv2
 import numpy as np
 
+# SIDEBAR
+with st.sidebar:
+    st.image("https://www.timeshighereducation.com/sites/default/files/sponsor-logo/white-gif-400px.gif")
+    st.markdown("[Ask DGP](https://chatdgp.streamlit.app/)")
+    st.markdown("[About Us](https://chatdgp.streamlit.app/)")
+    st.markdown("[Methodology](https://chatdgp.streamlit.app/)")
+    
 # Initialize Streamlit app
 st.set_page_config(page_title="DGP Chatbot", page_icon="🤖")
 st.title("Digital Governance Platform (DGP) Chatbot")

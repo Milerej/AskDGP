@@ -28,8 +28,8 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 AWS_ACCESS_KEY_ID = os.getenv("ACCESS_KEY")
 AWS_SECRET_ACCESS_KEY = os.getenv("SECRET_ACCESS_KEY")
-AWS_REGION = "ap-southeast-1"
-AWS_BUCKET = "askdgp-test"
+AWS_REGION = os.getenv("REGION_NAME")
+AWS_BUCKET = os.getenv("bucket_name")
 
 # Initialize OpenAI API key
 openai.api_key = OPENAI_API_KEY
@@ -60,7 +60,7 @@ def check_password():
         """Checks whether a password entered by the user is correct."""
         if hmac.compare_digest(st.session_state["password"], st.secrets["password"]):
             st.session_state["password_correct"] = True
-            del st.session_state["password"]  # Don't store the password.
+            del st.session_state["password"] 
         else:
             st.session_state["password_correct"] = False
 

@@ -14,6 +14,13 @@ with st.expander("Disclaimer",expanded=False,icon="🚨"):
     Always consult with qualified professionals for accurate and personalized advice.
     ''')
 
+# SIDEBAR
+with st.sidebar:
+    st.image("https://www.timeshighereducation.com/sites/default/files/sponsor-logo/white-gif-400px.gif")
+    st.markdown("[Ask DGP](https://askdgp.streamlit.app/)")
+    st.markdown("[About Us](https://askdgp.streamlit.app/)")
+    st.markdown("[Methodology](https://askdgp.streamlit.app/)")
+    
 st.write('''About Us
 
 1) Background
