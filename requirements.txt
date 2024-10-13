@@ -1,6 +1,8 @@
-pandas
-plotly
 streamlit
-yfinance
-pandas-datareader
-prophet
+hmac
+os
+pandas
+openai
+boto3
+load_dotenv
+StringIO
