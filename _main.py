@@ -11,6 +11,11 @@ from io import StringIO
 # Initialize Streamlit app
 st.set_page_config(page_title="DGP Chatbot", page_icon="🤖")
 
+# SIDEBAR
+with st.sidebar:
+    st.image("https://www.timeshighereducation.com/sites/default/files/sponsor-logo/white-gif-400px.gif")
+ 
+
 # Main Page
 st.title("Digital Governance Platform (DGP) Chatbot")
 st.caption("A Streamlit chatbot powered by Govtech")
@@ -85,6 +90,12 @@ data = read_data_from_s3(AWS_BUCKET, file_key)
 if data is None:
     st.error("Failed to load data from S3. Please check your bucket name and file key.")
     st.stop()  # Stop execution if data loading fails
+
+# SIDEBAR
+with st.sidebar:
+    st.markdown("[Ask DGP](_main.py)")
+    st.markdown("[About Us](_aboutus.py)")
+    st.markdown("[Methodology](_methodology.py)")
 
 # Initialize messages in session state
 if "messages" not in st.session_state:
