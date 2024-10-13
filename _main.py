@@ -212,12 +212,12 @@ elif page == "Methodology":
     st.title("Methodology")
     st.image('C:/Users/jerel/Desktop/AI Bootcamp POC - DGP Chatbot/venv/Flow1.PNG')
 
-    st.write('''Use Case 1:
+    st.write('''
+    Use Case 1:
     Users entered difficulties in updating a record in DGP and the User would like to seek clarifications on how they are able to perform the update. 
     The Chatbot is able to address the user's query by citing that the system is currently locked for updating due to an ongoing exercise.
-    ''')
     
-    st.write('''Use Case 2: 
+    Use Case 2: 
     Users would like to enquire about <to insert a use case> and the User would like to seek clarifications on how to <insert action>. 
     The Chatbot is unable to address the user's query, hence <insert chatbot action>. 
     ''')
