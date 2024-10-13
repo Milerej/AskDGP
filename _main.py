@@ -94,8 +94,8 @@ if data is None:
 # SIDEBAR
 with st.sidebar:
     st.markdown("[Ask DGP](_main.py)")
-    st.markdown("[About Us](_aboutus.py)")
-    st.markdown("[Methodology](_methodology.py)")
+    st.markdown("[About Us](./main/_aboutus.py)")
+    st.markdown("[Methodology](./main/_methodology.py)")
 
 # Initialize messages in session state
 if "messages" not in st.session_state:
