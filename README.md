@@ -68,9 +68,3 @@ Contributions are welcome! Please follow these steps to contribute:
 
 This project is licensed under the MIT License. 
 
-## Contact
-
-For any inquiries or feedback, please reach out to 
-Soh Zhi Qi (soh_zhi_qi@tech.gov.sg)
-Jere Lim (lim_keng_aik@tech.gov.sg)
-Ang Hwee Tuck (ang_hwee_tuck@sport.gov.sg)
