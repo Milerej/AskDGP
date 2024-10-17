@@ -33,8 +33,6 @@ s3 = boto3.client(
 # Sidebar Navigation
 with st.sidebar:
     st.image("https://www.timeshighereducation.com/sites/default/files/sponsor-logo/white-gif-400px.gif")
-    st.markdown("### Navigation")
-    page = st.selectbox("Choose a page:", ["Ask DGP", "About Us", "Methodology"])
 
 # Main Page
 st.title("Digital Governance Platform (DGP) Chatbot")
@@ -108,103 +106,129 @@ def search_chunks(prompt, chunks, query_field, reply_field, additional_field):
                 relevant_replies.append((chunk[reply_field][idx], chunk[additional_field][idx]))
     return relevant_replies
 
-# Display chat messages for Ask DGP page
-if page == "Ask DGP":
-    for msg in st.session_state.messages:
-        st.chat_message(msg["role"]).write(msg["content"])
+# Function to handle user input from suggestion buttons
+def handle_suggestion(suggestion):
+    """Process the suggestion and update the main chat with the response."""
+    # Show the selected suggestion in the main chat
+    st.session_state.messages.append({"role": "user", "content": suggestion})
+    # Process the user input
+    response_msg = process_user_input(suggestion)
+    st.session_state.messages.append({"role": "assistant", "content": response_msg})
 
+# Function to process user input
+def process_user_input(prompt):
     data_chunks = chunk_data(data, chunk_size=5)
     query_field = "Details of Query"
     reply_field = "Reply"
     additional_field = "Additional Comments"
 
+    # Search for relevant replies
+    relevant_replies = search_chunks(prompt, data_chunks, query_field, reply_field, additional_field)
+
+    if relevant_replies:
+        search_summary = "\n".join([f"Reply: {r[0]}\nAdditional Comments: {r[1]}" for r in relevant_replies[:5]])
+    else:
+        search_summary = "Sorry, I couldn't find any relevant information based on your query."
+
+    ai_prompt = f"""
+    Context - You are a helpful AI assistant operating in a helpdesk environment, tasked with addressing user queries based on provided data and chat history.
+    Objective - Your goal is to provide accurate and concise answers to user questions while maintaining clarity and professionalism.
+    Style - Use formal language with scientific terms and avoid personal opinions or unrelated topics. Responses should be structured and clear.
+    Tone - Maintain a professional and helpful tone throughout the interaction, concluding responses positively.
+    Audience - Your primary audience consists of users seeking assistance with specific queries, likely expecting straightforward and factual answers.
+    Response - Use formal language and scientific terms, avoiding personal opinions or unrelated topics. Please do not name an agency or user. Keep the response succinct in maximum 1 paragraph.
+
+    User's Query: {prompt}
+
+    Relevant Replies:
+    {search_summary}
+
+    Please provide a concise and well-structured response based on the retrieved replies. Thank the user, and if appropriate, let them know their query is being closed.
+    """
+
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": ai_prompt}
+            ],
+            max_tokens=150,
+            temperature=0
+        )
+        msg = response.choices[0].message.content.strip()
+    except Exception as e:
+        msg = f"An error occurred: {str(e)}"
+
+    return msg
+
+# Sidebar Navigation
+with st.sidebar:
+    st.markdown("### Navigation")
+    page = st.selectbox("Choose a page:", ["Ask DGP", "About Us", "Methodology"])
+    
+    # Suggestions for the user
+    st.markdown("### Frequently Asked Questions")
+    suggestions = [
+        "I am having issue accessing DGP modules / dashboards",
+        "I would like to know about the Billing of DGP annual subscription",
+        "I would like to know how to acknowledge the Agency Monthly Access Control Report (ACR)",
+        "I would like to find out how to remove User / User Access to DGP"
+    ]
+    
+    # Display suggestion buttons in the sidebar
+    for suggestion in suggestions:
+        if st.button(suggestion):
+            handle_suggestion(suggestion)
+
+# Display chat messages for Ask DGP page
+if page == "Ask DGP":
+    for msg in st.session_state.messages:
+        st.chat_message(msg["role"]).write(msg["content"])
+
     # Gather user input
     if prompt := st.chat_input("Type your message here..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
-
-        # Search for relevant replies
-        relevant_replies = search_chunks(prompt, data_chunks, query_field, reply_field, additional_field)
-
-        if relevant_replies:
-            search_summary = "\n".join([f"Reply: {r[0]}\nAdditional Comments: {r[1]}" for r in relevant_replies[:5]])
-        else:
-            search_summary = "Sorry, I couldn't find any relevant information based on your query."
-
-        ai_prompt = f"""
-        You are an AI chatbot. Here's a user's query and the corresponding search results from the data:
-
-        User's Query: {prompt}
-
-        Relevant Replies:
-        {search_summary}
-
-        Please provide a concise and well-structured response based on the retrieved replies. Thank the user, and if appropriate, let them know their query is being closed.
-        """
-
-        try:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": ai_prompt}
-                ],
-                max_tokens=150,
-                temperature=0.5
-            )
-            msg = response.choices[0].message.content.strip()
-        except Exception as e:
-            msg = f"An error occurred: {str(e)}"
-
-        st.session_state.messages.append({"role": "assistant", "content": msg})
-        st.chat_message("assistant").write(msg)
+        response_msg = process_user_input(prompt)
+        st.session_state.messages.append({"role": "assistant", "content": response_msg})
 
 # Content for About Us
 elif page == "About Us":
     st.title("About Us")
-    st.write("""1) Background
+    st.write("""
+1) Background
+The Digital Governance Platform (DGP) is designed to transform Whole-of-Government ICT and SS Governance, with the goal of effectively managing ICT risks and enhancing the delivery of digital services.
+The IT Service Management (ITSM) platform serves as the central system for agency users to report DGP-related issues or submit inquiries. Currently, a lean DGP Operations team manages initial ticket resolution by leveraging their expertise, historical responses, and available resources. Complex issues are escalated to Subject Matter Experts (SMEs), including Product Teams, Process Owners, Module Owners, and Technical Teams.
+This process heavily relies on manual intervention to review historical responses to similar inquiries. Additionally, it may require referencing relevant resources (e.g., manuals, user guides, forms, notices, and announcements) available on the DGP Portal, which can be time-consuming and inefficient.
 
-    The Digital Governance Platform (DGP) is designed to transform Whole-of-Government ICT & SS Governance, aiming to manage ICT risks more effectively and deliver improved digital services.
+             
+2) Problem Statement
+How can we streamline the ITSM inquiry process to:
+    a) Provide prompt and accurate responses to inquiries.
+    b) Reduce manual workload and enhance operational efficiency.
 
-    The ITSM platform serves as the central system for agency users to report DGP-related issues or submit queries. Currently, a lean DGP Ops team handles initial ticket resolution, using their knowledge, past responses, and available resources. Complex issues are escalated to the Subject Matter Experts (SMEs) such as Product teams, Process Owners, Module Owners and/or Technical Teams.
+             
+3) Proposed Solution
+By implementing a Large Language Model (LLM) to handle inquiries, we believe that the proof of concept (POC) can address repetitive ITSM queries, which constitute at least 60% of the ITSM tickets received. This initiative will enable:
+    a) Agency users to quickly resolve their concerns.
+    b) The Operations Team to focus on more complex and critical queries and tasks.
 
-    This process is heavily reliant on manual human intervention to look back at historical responses of similar nature to address some of the queries. It may also be required to reference to relevant source (e.g. Manuals, User Guides, Forms, Notices and Announcements) that are available on the DGP Portal, which is time-consuming and inefficient.
+             
+4) Role of the LLM in the Solution
+Utilizing the capabilities of the LLM, it can replicate the Operations Team's ability to provide clarity and address agency users' inquiries based on relevant resources (e.g., advisories, circulars, user guides, functional specifications, and FAQs). For unresolved and complex queries, the LLM can recommend logging a ticket at the end of the session, ensuring that the Operations Team and SMEs follow up on these issues. Continuous enhancement can be achieved by updating the LLM with data from resolved complex issues, thereby reducing the need for manual intervention by the Operations Team and SMEs.
 
-    2) Problem Statement
+             
+5) Relevant Data Collected
+The data utilized for this POC primarily originates from the ITSM. It has been anonymized and desensitized using the Cloak.
 
-    How may we streamline the ITSM inquiry process to:
-
-    a) Provide prompt and accurate responses to queries
-
-    b) Reduce manual workload and enhance efficiency
-
-    3) How would you try to solve this problem?
-
-    By implementing a Large Language Model (LLM) to handle queries, we believe that the POC is able to address repeated ITSM queries which forms at least 60% of the ITSM Tickets received. This will help to:
-
-    a) Enable Agency Users to quickly resolve their concerns and
-
-    b) Free up the capacity of the Ops Team to focus on more complex and/or critical queries and tasks.
-
-    4) How would you think LLM can be used to support your solution?
-
-    Using the LLM's library and features, it is able to mimic the Ops Team's ability to provide clarity and address Agency Users' issues and queries based on relevant sources (e.g., Advisories, Circulars, User Guides, Functional Specs and FAQs). For unresolved issues and queries that are complex, the LLM may request that a ticket be logged at the end of the session. The Ops Team and SMEs will follow up to address the remaining complex queries. For continuous enhancement, data from resolved complex issues and queries can be updated to the LLM to further reduce manual intervention by the Ops Team and SMEs.
-
-    5) What are the relevant data do you currently collect and already have?
-
-    The data in use for this POC are mainly from ITSM. The data has been anonymised and desensitised using Cloak.
-
-    6) Features
-
-    The Chatbot will include the following features:
-
-    a) Natural Language Processing (NLP) - Ability to understand, interpret and communicate to Users in human language.
-
-    b) Clarity of issues and problems - Ability to deep dive into the User's questions by asking follow-up questions.
-
-    c) Contextualise resolution - Ability to identify User's purpose and ask based on the interactions and provide contextualised replies to resolve User's queries.
-
-    d) Augmentation to Ops Team - Ability to handle basic repeated queries by sieving through past responses of similar nature.
+             
+6) Features
+The chatbot will include the following features:
+    a) Natural Language Processing (NLP): The ability to understand, interpret, and communicate in human language.
+    b) Clarity of Issues and Problems: The capability to delve deeper into users' questions by asking follow-up queries.
+    c) Contextualized Resolution: The ability to identify the user's intent and respond based on the interaction, providing tailored replies to resolve inquiries.
+    d) Augmentation for the Operations Team: The capacity to handle basic repetitive queries by filtering through past responses of similar nature.
     """)
 
 # Content for Methodology
@@ -213,11 +237,24 @@ elif page == "Methodology":
     st.image('Flow1.PNG')
 
     st.write('''
-    Use Case 1:
-    Users entered difficulties in updating a record in DGP and the User would like to seek clarifications on how they are able to perform the update. 
-    The Chatbot is able to address the user's query by citing that the system is currently locked for updating due to an ongoing exercise.
-    
-    Use Case 2: 
-    Users would like to enquire about <to insert a use case> and the User would like to seek clarifications on how to <insert action>. 
-    The Chatbot is unable to address the user's query, hence <insert chatbot action>. 
+Use Case 1
+Scenario: Users encounter difficulties in updating a record within Digital Governance Platform (DGP) and seek clarification on the update process. They turn to the DGP chatbot for assistance.
+User Intent: Users want to understand how to carry out updates but encounter uncertainty regarding the inability to perform the update.
+Chatbot Response: Within the sidebar, the chatbot offers a section titled "Frequently Asked Questions." Users can easily select their specific query from a predefined list, streamlining the process of obtaining assistance.
+Outcome: Users receive immediate and relevant information regarding their inquiry, without the need to type out the query. This efficient interaction reduces frustration and improves user satisfaction, while also minimizing the need for further clarifications or escalation.
+
+                          
+Use Case 2
+Scenario: Users encounter difficulties in updating a record within DGP and seek clarification on the update process. They turn to the DGP chatbot for assistance.
+User Intent: Users want to understand how to carry out updates but encounter uncertainty regarding the inability to perform the update.
+Chatbot Response: The chatbot effectively addresses the user's inquiry by informing them that the system is currently locked for updates due to an ongoing exercise. This response not only clarifies the situation but also manages user expectations by explaining the reason for the system's unavailability.
+Outcome: Users gain a clear understanding of the constraints affecting their ability to perform updates, thereby reducing frustration and enhancing their overall experience with the system.
+
+             
+Use Case 3    
+Scenario: Users encounter difficulties in updating a record within DGP and seek clarification on the update process. They turn to the DGP chatbot for assistance.
+User Intent: Users want to understand how to carry out updates but encounter uncertainty regarding the inability to perform the update.
+Chatbot Response: After several rounds of clarifications, the chatbot is unable to provide a satisfactory answer to the user's inquiry. In response, it offers to assist the user in logging a case with the helpdesk, ensuring that their issue is escalated for further resolution.
+Outcome: The chatbot  redirected Users to the helpdesk for personalized support by logging a ticket on behalf of the user based on the conversation. This approach not only enhances user satisfaction but also maintains the chatbot's role as a facilitator for more complex issues, ultimately improving the overall user experience with the DGP system.
+   
     ''')
