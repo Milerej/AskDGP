@@ -1,4 +1,3 @@
-#WORKING VERSION OF FREQ SEARCHED TERMS (STATIC)
 # Imports
 import os
 import hmac
@@ -8,9 +7,16 @@ import boto3
 import streamlit as st
 from dotenv import load_dotenv
 from io import StringIO
+from fuzzywuzzy import process
+from collections import Counter
 
 # Initialize Streamlit app
 st.set_page_config(page_title="DGP Chatbot", page_icon="🤖")
+
+# Automatically clear cache/session state on start
+if 'initialized' not in st.session_state:
+    st.session_state.clear()
+    st.session_state['initialized'] = True
 
 # Load environment variables
 load_dotenv()
@@ -73,7 +79,7 @@ def check_password():
 
 # Main application flow
 if not check_password():
-    st.stop()  # Stop if password validation fails.
+    st.stop()
 
 # Load data from S3
 file_key = 'Good_copy_fixed_anonymised_data.csv'
@@ -82,49 +88,50 @@ data = read_data_from_s3(AWS_BUCKET, file_key)
 # Check if data was successfully loaded
 if data is None:
     st.error("Failed to load data from S3. Please check your bucket name and file key.")
-    st.stop()  # Stop execution if data loading fails
+    st.stop()
 
-# Initialize messages in session state
+# Initialize messages and query counter in session state
 if "messages" not in st.session_state:
     st.session_state.messages = [{"role": "assistant", "content": "Hello there! Please enter your query to continue."}]
+if "query_counter" not in st.session_state:
+    st.session_state.query_counter = Counter()
 
 # Function to chunk data into manageable pieces
 def chunk_data(data, chunk_size=5):
     """Chunk a DataFrame into smaller DataFrames."""
     return [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
 
-# Function to search for answers in the chunks
-def search_chunks(prompt, chunks, query_field, reply_field, additional_field):
-    relevant_replies = []
-    for chunk in chunks:
-        chunk[query_field] = chunk[query_field].astype(str)
-        chunk[reply_field] = chunk[reply_field].astype(str)
-        chunk[additional_field] = chunk[additional_field].astype(str)
-        
-        chunk_str = ' '.join(chunk[query_field].tolist())
-        if any(word in chunk_str.lower() for word in prompt.lower().split()):
-            for idx in chunk.index:
-                relevant_replies.append((chunk[reply_field][idx], chunk[additional_field][idx]))
-    return relevant_replies
-
-# Function to handle user input from suggestion buttons
-def handle_suggestion(suggestion):
-    """Process the suggestion and update the main chat with the response."""
-    # Show the selected suggestion in the main chat
-    st.session_state.messages.append({"role": "user", "content": suggestion})
-    # Process the user input
-    response_msg = process_user_input(suggestion)
-    st.session_state.messages.append({"role": "assistant", "content": response_msg})
-
 # Function to process user input
 def process_user_input(prompt):
     data_chunks = chunk_data(data, chunk_size=5)
     query_field = "Details of Query"
+    subject_field = "Subject"  # Use Subject field
     reply_field = "Reply"
     additional_field = "Additional Comments"
 
-    # Search for relevant replies
-    relevant_replies = search_chunks(prompt, data_chunks, query_field, reply_field, additional_field)
+    relevant_replies = []
+    
+    for chunk in data_chunks:
+        chunk[query_field] = chunk[query_field].astype(str)
+        chunk[subject_field] = chunk[subject_field].astype(str)  # Convert Subject to string
+        chunk[reply_field] = chunk[reply_field].astype(str)
+        chunk[additional_field] = chunk[additional_field].astype(str)
+
+        # Combine Subject and Details of Query for search
+        combined_str = ' '.join(chunk[query_field].tolist() + chunk[subject_field].tolist())
+        
+        if prompt.lower() in combined_str.lower():
+            for idx in chunk.index:
+                relevant_replies.append((chunk[reply_field][idx], chunk[additional_field][idx]))
+
+    if not relevant_replies:
+        queries = data[query_field].astype(str).tolist() + data[subject_field].astype(str).tolist()
+        responses = data[[reply_field, additional_field]]
+        matches = process.extract(prompt, queries, limit=None)
+
+        for match in matches:
+            index = queries.index(match[0])
+            relevant_replies.append((responses[reply_field].iloc[index], responses[additional_field].iloc[index]))
 
     if relevant_replies:
         search_summary = "\n".join([f"Reply: {r[0]}\nAdditional Comments: {r[1]}" for r in relevant_replies[:5]])
@@ -139,7 +146,7 @@ def process_user_input(prompt):
     Relevant Replies:
     {search_summary}
 
-    Please provide a concise and well-structured response based on the retrieved replies. Thank the user, and if appropriate, let them know their query is being closed.
+    Please provide a concise and well-structured response based on the retrieved replies.
     """
 
     try:
@@ -158,27 +165,38 @@ def process_user_input(prompt):
 
     return msg
 
+# Function to group similar subjects using fuzzy matching
+def group_similar_subjects(subjects, threshold=80):
+    """Group similar subjects based on a similarity threshold."""
+    unique_subjects = []
+    
+    for subject in subjects:
+        # Compare against existing unique subjects
+        matches = process.extract(subject, unique_subjects, limit=None)
+        if not matches or max([match[1] for match in matches]) < threshold:
+            unique_subjects.append(subject)  # Add as a new unique subject
+    
+    return unique_subjects
+
 # Sidebar Navigation
 with st.sidebar:
     st.markdown("### Navigation")
     page = st.selectbox("Choose a page:", ["Ask DGP", "About Us", "Methodology"])
-    
-    st.write("""
-         """) 
-    
-    # Suggestions for the user
-    st.markdown("### Frequently Asked Questions")
-    suggestions = [
-        "I am having issue accessing DGP modules / dashboards",
-        "I want to find out about billing for the subscription to DGP",
-        "I would like to know how to acknowledge the Agency Monthly Access Control Report (ACR)",
-        "I would like to find out how to remove User / User Access to DGP"
-    ]
-    
+
+    st.write("") 
+
+    # Get top searched terms from "Subject"
+    top_terms = data["Subject"].dropna().value_counts().nlargest(20).index.tolist()  # Get top 20 terms
+    grouped_terms = group_similar_subjects(top_terms)
+
     # Display suggestion buttons in the sidebar
-    for suggestion in suggestions:
-        if st.button(suggestion):
-            handle_suggestion(suggestion)
+    st.markdown("### Frequently Searched Terms")
+    for term in grouped_terms:
+        if st.button(term):
+            st.session_state.messages.append({"role": "user", "content": term})
+            st.session_state.query_counter[term] += 1
+            response_msg = process_user_input(term)
+            st.session_state.messages.append({"role": "assistant", "content": response_msg})
 
 # Display chat messages for Ask DGP page
 if page == "Ask DGP":
@@ -189,6 +207,7 @@ if page == "Ask DGP":
     if prompt := st.chat_input("Type your message here..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
+        st.session_state.query_counter[prompt] += 1
         response_msg = process_user_input(prompt)
         st.session_state.messages.append({"role": "assistant", "content": response_msg})
 
