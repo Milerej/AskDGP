@@ -160,7 +160,7 @@ def process_user_input(prompt):
     Here are some relevant replies extracted from the database:
     {search_summary}
 
-    Previous conversation context:
+    Previous conversation context here:
     {context}
 
     User's Query: {prompt}
