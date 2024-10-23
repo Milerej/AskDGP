@@ -232,12 +232,13 @@ with st.sidebar:
     combined_terms = top_subjects
     grouped_terms = group_similar_subjects(combined_terms)
 
-    grouped_terms
-
     # Display suggestion buttons in the sidebar
     st.markdown("### Frequently Asked Questions")
     for term in grouped_terms:
         question = generate_question(term)  # Generate a question for each term
+
+        question
+
         if st.button(question):  # Use the generated question as the button label
             st.session_state.messages.append({"role": "user", "content": question})
             st.session_state.query_counter[question] += 1
