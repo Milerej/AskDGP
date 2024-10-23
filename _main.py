@@ -168,8 +168,9 @@ def process_user_input(prompt):
 
     Based on the provided information, please formulate a response that:
     - Directly addresses the user's query.
-    - Avoids unnecessary details.
-    - Is structured clearly for easy understanding.
+    - Avoids unnecessary detail.
+    - Exclude any references to specific individuals or organisations within the relevant replies extracted.
+    - Is structured clearly, in a step-by-step manner, for easy understanding.
     """
 
     try:
