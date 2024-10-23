@@ -191,7 +191,7 @@ def process_user_input(prompt):
 
 # Function to generate a question from a term
 def generate_question(term):
-    prompt = f"Transform the following term into a clear question: '{term}' with no enclosing delimiters"
+    prompt = f"Transform '{term}' directly into a clear question, with no enclosing punctuation"
     
     try:
         response = openai.ChatCompletion.create(
