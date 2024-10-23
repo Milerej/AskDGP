@@ -191,7 +191,7 @@ def process_user_input(prompt):
 
 # Function to generate a question from a term
 def generate_question(term):
-    prompt = f"Transform the following term into a clear question: '{term}'"
+    prompt = f"Transform the following term into a clear question: '{term}' with no enclosing delimiters"
     
     try:
         response = openai.ChatCompletion.create(
@@ -236,8 +236,6 @@ with st.sidebar:
     st.markdown("### Frequently Asked Questions")
     for term in grouped_terms:
         question = generate_question(term)  # Generate a question for each term
-
-        question
 
         if st.button(question):  # Use the generated question as the button label
             st.session_state.messages.append({"role": "user", "content": question})
