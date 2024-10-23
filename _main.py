@@ -15,7 +15,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 AWS_ACCESS_KEY_ID = os.getenv("ACCESS_KEY")
 AWS_SECRET_ACCESS_KEY = os.getenv("SECRET_ACCESS_KEY")
 AWS_REGION = os.getenv("REGION_NAME")
-AWS_BUCKET = os.getenv("bucket_name")
+AWS_BUCKET = os.getenv("BUCKET_NAME")
 CORRECT_PASSWORD = os.getenv("PASSWORD")  # Make sure this is set in your environment
 
 # Initialize OpenAI API key
@@ -191,7 +191,7 @@ def generate_question(term):
     
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=50,
             temperature=0.3
