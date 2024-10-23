@@ -154,23 +154,25 @@ def process_user_input(prompt):
     
     ai_prompt = f"""
     You are a helpful and professional AI chatbot assistant. 
-    Your task is to provide clear, concise, and accurate responses to retrieve the data from the database to provide a relevant answer based on the user's query. 
+    Your task is to provide clear, concise, and accurate responses based on relevant replies extracted from the database to provide a relevant answer based on the user's query, taking into account the ongoing conversation context. 
     Please ensure your tone is friendly and supportive.
-    Always check if you have addressed the issue. if it is not resolved after a few attempts to clarify, please offer to log a ticket.
+ 
+    Here are some relevant replies extracted from the database:
+    {search_summary}
 
-    Here's the recent conversation context:
+    Previous conversation context:
     {context}
 
     User's Query: {prompt}
-
-    Here are some relevant replies extracted from the data:
-    {search_summary}
 
     Based on the provided information, please formulate a response that:
     - Directly addresses the user's query.
     - Avoids unnecessary detail.
     - Exclude any references to specific individuals or organisations within the relevant replies extracted.
     - Is structured clearly, in a step-by-step manner, for easy understanding.
+
+    If you do not have an answer, do not attempt to invent one but instead offer to log a ticket.
+    Always check if you have addressed the issue. if it is not resolved after a few attempts to clarify, please offer to log a ticket.
     """
 
     try:
