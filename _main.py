@@ -1,6 +1,5 @@
-# Imports
+# app.py
 import os
-import hmac
 import pandas as pd
 import openai
 import boto3
@@ -10,14 +9,6 @@ from io import StringIO
 from fuzzywuzzy import process
 from collections import Counter
 
-# Initialize Streamlit app
-st.set_page_config(page_title="DGP Chatbot", page_icon="🤖")
-
-# Automatically clear cache/session state on start
-if 'initialized' not in st.session_state:
-    st.session_state.clear()
-    st.session_state['initialized'] = True
-
 # Load environment variables
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -25,6 +16,7 @@ AWS_ACCESS_KEY_ID = os.getenv("ACCESS_KEY")
 AWS_SECRET_ACCESS_KEY = os.getenv("SECRET_ACCESS_KEY")
 AWS_REGION = os.getenv("REGION_NAME")
 AWS_BUCKET = os.getenv("bucket_name")
+CORRECT_PASSWORD = os.getenv("PASSWORD")  # Make sure this is set in your environment
 
 # Initialize OpenAI API key
 openai.api_key = OPENAI_API_KEY
@@ -37,6 +29,14 @@ s3 = boto3.client(
     region_name=AWS_REGION
 )
 
+# Initialize Streamlit app
+st.set_page_config(page_title="DGP Chatbot", page_icon="🤖")
+
+# Automatically clear cache/session state on start
+if 'initialized' not in st.session_state:
+    st.session_state.clear()
+    st.session_state['initialized'] = True
+
 # Sidebar Navigation
 with st.sidebar:
     st.image("https://www.timeshighereducation.com/sites/default/files/sponsor-logo/white-gif-400px.gif")
@@ -45,7 +45,7 @@ with st.sidebar:
 st.title("Digital Governance Platform (DGP) Chatbot")
 st.caption("A Streamlit chatbot powered by Govtech")
 with st.expander("Disclaimer", expanded=False, icon="🚨"):
-    st.write('''IMPORTANT NOTICE: This web application is developed as a proof-of-concept prototype. The information provided here is NOT intended for actual usage and should not be relied upon for making any decisions, especially those related to financial, legal, or healthcare matters. Furthermore, please be aware that the LLM may generate inaccurate or incorrect information. You assume full responsibility for how you use any generated output. Always consult with qualified professionals for accurate and personalized advice.''')
+    st.write('''IMPORTANT NOTICE: This web application is developed as a proof-of-concept prototype. The information provided here is NOT intended for actual usage and should not be relied upon for making any decisions...''')
 
 # Function to read data from S3
 def read_data_from_s3(bucket_name, file_key):
@@ -60,22 +60,24 @@ def read_data_from_s3(bucket_name, file_key):
 
 # Function to check password
 def check_password():
-    """Returns `True` if the user has the correct password."""
-    def password_entered():
-        """Checks whether a password entered by the user is correct."""
-        if hmac.compare_digest(st.session_state["password"], st.secrets["password"]):
-            st.session_state["password_correct"] = True
-            del st.session_state["password"] 
-        else:
-            st.session_state["password_correct"] = False
+    """Returns True if the user has the correct password."""
+    if 'password_correct' not in st.session_state:
+        st.session_state.password_correct = False
 
-    if st.session_state.get("password_correct", False):
+    if st.session_state.password_correct:
         return True
 
-    st.text_input("Password", type="password", on_change=password_entered, key="password")
-    if "password_correct" in st.session_state and not st.session_state["password_correct"]:
+    user_password = st.text_input("Password", type="password", key="password", on_change=check_password_submit)
+
+    return st.session_state.password_correct
+
+def check_password_submit():
+    """Function to handle password submission."""
+    if st.session_state.password.strip() == CORRECT_PASSWORD.strip():
+        st.session_state.password_correct = True
+        st.success("Password correct!")
+    else:
         st.error("😕 Password incorrect")
-    return False
 
 # Main application flow
 if not check_password():
@@ -86,8 +88,14 @@ file_key = 'Good_copy_fixed_anonymised_data.csv'
 data = read_data_from_s3(AWS_BUCKET, file_key)
 
 # Check if data was successfully loaded
-if data is None:
-    st.error("Failed to load data from S3. Please check your bucket name and file key.")
+if data is None or data.empty:
+    st.error("Failed to load data from S3 or the data is empty. Please check your bucket name and file key.")
+    st.stop()
+
+# Check for necessary columns
+required_columns = ["Details of Query", "Subject", "Reply", "Additional Comments"]
+if not all(col in data.columns for col in required_columns):
+    st.error(f"Missing required columns in the data: {set(required_columns) - set(data.columns)}")
     st.stop()
 
 # Initialize messages and query counter in session state
@@ -103,61 +111,73 @@ def chunk_data(data, chunk_size=5):
 
 # Function to process user input
 def process_user_input(prompt):
-    data_chunks = chunk_data(data, chunk_size=5)
-    query_field = "Details of Query"
-    subject_field = "Subject"  # Use Subject field
-    reply_field = "Reply"
-    additional_field = "Additional Comments"
-
+    data_chunks = chunk_data(data)
     relevant_replies = []
-    
-    for chunk in data_chunks:
-        chunk[query_field] = chunk[query_field].astype(str)
-        chunk[subject_field] = chunk[subject_field].astype(str)  # Convert Subject to string
-        chunk[reply_field] = chunk[reply_field].astype(str)
-        chunk[additional_field] = chunk[additional_field].astype(str)
 
-        # Combine Subject and Details of Query for search
-        combined_str = ' '.join(chunk[query_field].tolist() + chunk[subject_field].tolist())
+    for chunk in data_chunks:
+        if chunk is None or chunk.empty:
+            st.error("Chunk is None or empty.")
+            continue
+        
+        chunk["Details of Query"] = chunk["Details of Query"].fillna('').astype(str)
+        chunk["Subject"] = chunk["Subject"].fillna('').astype(str)
+        chunk["Reply"] = chunk["Reply"].fillna('').astype(str)
+        chunk["Additional Comments"] = chunk["Additional Comments"].fillna('').astype(str)
+
+        combined_str = ' '.join(chunk["Details of Query"].tolist() + chunk["Subject"].tolist())
         
         if prompt.lower() in combined_str.lower():
             for idx in chunk.index:
-                relevant_replies.append((chunk[reply_field][idx], chunk[additional_field][idx]))
+                relevant_replies.append((chunk.loc[idx, "Reply"], chunk.loc[idx, "Additional Comments"]))
 
     if not relevant_replies:
-        queries = data[query_field].astype(str).tolist() + data[subject_field].astype(str).tolist()
-        responses = data[[reply_field, additional_field]]
-        matches = process.extract(prompt, queries, limit=None)
+        queries = data["Details of Query"].fillna('').astype(str).tolist() + data["Subject"].fillna('').astype(str).tolist()
+        responses = data[["Reply", "Additional Comments"]].fillna('')
 
-        for match in matches:
-            index = queries.index(match[0])
-            relevant_replies.append((responses[reply_field].iloc[index], responses[additional_field].iloc[index]))
+        # Use a try-except to avoid IndexError
+        try:
+            matches = process.extract(prompt, queries, limit=None)
+
+            for match in matches:
+                index = queries.index(match[0])
+                if index < len(responses):
+                    relevant_replies.append((responses["Reply"].iloc[index], responses["Additional Comments"].iloc[index]))
+        except Exception as e:
+            st.error(f"Error processing matches: {str(e)}")
 
     if relevant_replies:
         search_summary = "\n".join([f"Reply: {r[0]}\nAdditional Comments: {r[1]}" for r in relevant_replies[:5]])
     else:
         search_summary = "Sorry, I couldn't find any relevant information based on your query."
 
+    context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in st.session_state.messages[-5:]])
+    
     ai_prompt = f"""
-    You are a helpful AI chatbot assistant. Here's a user's query and the corresponding search results from the data:
+    You are a helpful and professional AI chatbot assistant. 
+    Your task is to provide clear, concise, and accurate responses to retrieve the data from the database to provide a relevant answer based on the user's query. 
+    Please ensure your tone is friendly and supportive.
+    Always check if you have addressed the issue. if it is not resolved after a few attempts to clarify, please offer to log a ticket.
+
+    Here's the recent conversation context:
+    {context}
 
     User's Query: {prompt}
 
-    Relevant Replies:
+    Here are some relevant replies extracted from the data:
     {search_summary}
 
-    Please provide a concise and well-structured response based on the retrieved replies.
+    Based on the provided information, please formulate a response that:
+    - Directly addresses the user's query.
+    - Avoids unnecessary details.
+    - Is structured clearly for easy understanding.
     """
 
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": ai_prompt}
-            ],
+            messages=[{"role": "user", "content": ai_prompt}],
             max_tokens=150,
-            temperature=0
+            temperature=0.3
         )
         msg = response.choices[0].message.content.strip()
     except Exception as e:
@@ -165,13 +185,29 @@ def process_user_input(prompt):
 
     return msg
 
+# Function to generate a question from a term
+def generate_question(term):
+    prompt = f"Transform the following term into a clear question: '{term}'"
+    
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=50,
+            temperature=0.3
+        )
+        question = response.choices[0].message.content.strip()
+        return question
+    except Exception as e:
+        st.error(f"Error generating question: {str(e)}")
+        return term  # Fallback to the term itself if there's an error
+
 # Function to group similar subjects using fuzzy matching
 def group_similar_subjects(subjects, threshold=80):
     """Group similar subjects based on a similarity threshold."""
     unique_subjects = []
     
     for subject in subjects:
-        # Compare against existing unique subjects
         matches = process.extract(subject, unique_subjects, limit=None)
         if not matches or max([match[1] for match in matches]) < threshold:
             unique_subjects.append(subject)  # Add as a new unique subject
@@ -185,17 +221,21 @@ with st.sidebar:
 
     st.write("") 
 
-    # Get top searched terms from "Subject"
-    top_terms = data["Subject"].dropna().value_counts().nlargest(20).index.tolist()  # Get top 20 terms
-    grouped_terms = group_similar_subjects(top_terms)
+    # Get top searched terms from "Subject" only
+    top_subjects = data["Subject"].dropna().value_counts().nlargest(20).index.tolist()
+    
+    # Combine and group the list
+    combined_terms = top_subjects
+    grouped_terms = group_similar_subjects(combined_terms)
 
     # Display suggestion buttons in the sidebar
-    st.markdown("### Frequently Searched Terms")
+    st.markdown("### Frequently Asked Questions")
     for term in grouped_terms:
-        if st.button(term):
-            st.session_state.messages.append({"role": "user", "content": term})
-            st.session_state.query_counter[term] += 1
-            response_msg = process_user_input(term)
+        question = generate_question(term)  # Generate a question for each term
+        if st.button(question):  # Use the generated question as the button label
+            st.session_state.messages.append({"role": "user", "content": question})
+            st.session_state.query_counter[question] += 1
+            response_msg = process_user_input(question)
             st.session_state.messages.append({"role": "assistant", "content": response_msg})
 
 # Display chat messages for Ask DGP page
@@ -208,7 +248,9 @@ if page == "Ask DGP":
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
         st.session_state.query_counter[prompt] += 1
-        response_msg = process_user_input(prompt)
+        
+        with st.spinner("Processing your request..."):
+            response_msg = process_user_input(prompt)
         st.session_state.messages.append({"role": "assistant", "content": response_msg})
 
 # Content for About Us
