@@ -176,7 +176,7 @@ def process_user_input(prompt):
         response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": ai_prompt}],
-            max_tokens=150,
+            max_tokens=1000,
             temperature=0.3
         )
         msg = response.choices[0].message.content.strip()
