@@ -174,7 +174,7 @@ def process_user_input(prompt):
 
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": ai_prompt}],
             max_tokens=150,
             temperature=0.3
