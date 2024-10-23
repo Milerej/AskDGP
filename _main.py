@@ -154,16 +154,17 @@ def process_user_input(prompt):
     
     ai_prompt = f"""
     You are a helpful and professional AI chatbot assistant. 
-    Your task is to provide clear, concise, and accurate responses based on relevant replies extracted from the database to provide a relevant answer based on the user's query, taking into account the ongoing conversation context. 
+    Your task is to provide clear, concise, and accurate responses based on relevant replies extracted from a database, to provide a relevant answer based on the user's query, taking into account the ongoing conversation context. 
     Please ensure your tone is friendly and supportive.
- 
+
+    Previous conversation context:
+    {context}
+
     Here are some relevant replies extracted from the database:
     {search_summary}
 
-    Previous conversation context here:
-    {context}
-
-    User's Query: {prompt}
+    User's Query:
+    {prompt}
 
     Based on the provided information, please formulate a response that:
     - Directly addresses the user's query.
@@ -171,8 +172,8 @@ def process_user_input(prompt):
     - Exclude any references to specific individuals or organisations within the relevant replies extracted.
     - Is structured clearly, in a step-by-step manner, for easy understanding.
 
-    If you do not have an answer, do not attempt to invent one but instead offer to log a ticket.
-    Always check if you have addressed the issue. if it is not resolved after a few attempts to clarify, please offer to log a ticket.
+    If you do not have an answer, say so and instead offer to log a ticket.
+    Always check if you have addressed the issue. If it is not resolved after a few attempts to clarify, please offer to log a ticket.
     """
 
     try:
@@ -230,6 +231,8 @@ with st.sidebar:
     # Combine and group the list
     combined_terms = top_subjects
     grouped_terms = group_similar_subjects(combined_terms)
+
+    grouped_terms
 
     # Display suggestion buttons in the sidebar
     st.markdown("### Frequently Asked Questions")
