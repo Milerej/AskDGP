@@ -218,42 +218,19 @@ def process_user_input(prompt):
     Show the summary in the main chat area in the following format after every reply    
         **Summary**
         1) Sub Category : [Select the most relevant category based on the user input. If there is no matching category, use "Advisories, Briefings and any other business matters"]
-        "Advisories, Briefings and any other business matters" : "advisory",
-        "Application Access & Performance (including Migration to GCC+)" : "access",
-        "Application Access & Performance (including Migration to GCC+)" : "access control",
-        "Application Access & Performance (including Migration to GCC+)" : "inactive",
-        "Application Access & Performance (including Migration to GCC+)" : "unauthorised",
-        "Application Access & Performance (including Migration to GCC+)" : "ACR",
-        "Application Access & Performance (including Migration to GCC+)" : "login",
-        "Application Access & Performance (including Migration to GCC+)" : "coorinator",
-        "Data / UI & Process/Workflow of Agency & System Management Modules" : "system",
-        "Data / UI & Process/Workflow of Agency & System Management Modules" : "sca",
-        "Data / UI & Process/Workflow of Agency & System Management Modules" : "system criticality",
-        "Data / UI & Process/Workflow of Agency & System Management Modules" : "rml",
-        "Data / UI & Process/Workflow of Agency & System Management Modules" : "risk materiality",
-        "Data / UI Agency Health Check" : "health check",
-        "Data / UI Agency Health Check" : "cio dashboard",
-        "Data / UI of AIISA, IM8 Process Audit, IM8 VAPT Findings, UC & Internal Audit Modules" : "audit",
-        "Data / UI of AIISA, IM8 Process Audit, IM8 VAPT Findings, UC & Internal Audit Modules" : "aiisa",
-        "Data / UI of AIISA, IM8 Process Audit, IM8 VAPT Findings, UC & Internal Audit Modules" : "process audit",
-        "Data / UI of AIISA, IM8 Process Audit, IM8 VAPT Findings, UC & Internal Audit Modules" : "vapt audit",
-        "Data / UI of AIISA, IM8 Process Audit, IM8 VAPT Findings, UC & Internal Audit Modules" : "uc audit",
-        "Data / UI of AIISA, IM8 Process Audit, IM8 VAPT Findings, UC & Internal Audit Modules" : "internal audit",
-        "Data / UI of CageScan Module" : "cagescan",
-        "Data / UI of CISO Reporting Module" : "ciso",
-        "Data / UI of Digital Service Module" : "digital service",
-        "Data / UI of ICT Governance Module & MF Dashboards" : "ict governance",
-        "Data / UI of ICT Governance Module & MF Dashboards" : "governance module",
-        "Data / UI of ICT Governance Module & MF Dashboards" : "mf",
-        "Data / UI of ICT Governance Module & MF Dashboards" : "ministry family",
-        "Data / UI of ICT Plan and Spend & PSIRC Module" : "plan and spend",
-        "Data / UI of ICT Plan and Spend & PSIRC Module" : "ict plan",
-        "Data / UI of ICT Plan and Spend & PSIRC Module" : "ict spend",
-        "Data / UI of ICT Plan and Spend & PSIRC Module" : "psirc",
-        "Data / UI of Integrated Risk Management Module" : "risk management",
-        "Data / UI of Integrated Risk Management Module" : "irm",
-        "Data / UI of Policy, Standards and Guidelines / Waiver Module" : "waiver",
-        "Data / UI of Supplier Management Module" : "supplier"
+            Advisories, Briefings and any other business matters
+            Application Access & Performance (including Migration to GCC+)
+            Data / UI & Process/Workflow of Agency & System Management Modules
+            Data / UI Agency Health Check
+            Data / UI of AIISA, IM8 Process Audit, IM8 VAPT Findings, UC & Internal Audit Modules
+            Data / UI of CageScan Module
+            Data / UI of CISO Reporting Module
+            Data / UI of Digital Service Module
+            Data / UI of ICT Governance Module & MF Dashboards
+            Data / UI of ICT Plan and Spend & PSIRC Module
+            Data / UI of Integrated Risk Management Module
+            Data / UI of Policy, Standards and Guidelines / Waiver Module
+            Data / UI of Supplier Management Module
 
         2) Subject : [Summarise based on user's prompt]
 
