@@ -57,7 +57,7 @@ def read_data_from_s3(bucket_name, file_key):
 
         # Attempt to decode as UTF-8 first
         try:
-            decoded_content = csv_content.decode('utf-8')
+            decoded_content = csv_content.decode('cp1252')
         except UnicodeDecodeError:
             # If UTF-8 decoding fails, try ISO-8859-1
             decoded_content = csv_content.decode('ISO-8859-1')
