@@ -17,7 +17,7 @@ AWS_ACCESS_KEY_ID = os.getenv("ACCESS_KEY")
 AWS_SECRET_ACCESS_KEY = os.getenv("SECRET_ACCESS_KEY")
 AWS_REGION = os.getenv("REGION_NAME")
 AWS_BUCKET = os.getenv("BUCKET_NAME")
-CORRECT_PASSWORD = os.getenv("PASSWORD")  # Make sure this is set in your environment
+CORRECT_PASSWORD = os.getenv("PASSWORD")  # Ensure this is set in your environment
 
 # Initialize OpenAI API key
 openai.api_key = OPENAI_API_KEY
@@ -57,9 +57,8 @@ def read_data_from_s3(bucket_name, file_key):
 
         # Attempt to decode as UTF-8 first
         try:
-            decoded_content = csv_content.decode('cp1252')
+            decoded_content = csv_content.decode('utf-8')
         except UnicodeDecodeError:
-            # If UTF-8 decoding fails, try ISO-8859-1
             decoded_content = csv_content.decode('ISO-8859-1')
 
         return pd.read_csv(StringIO(decoded_content))
@@ -86,7 +85,6 @@ def check_password():
 
 def check_password_submit():
     """Function to handle password submission."""
-    # Ensure the password exists in session state before checking
     if 'password' in st.session_state and st.session_state.password.strip() == CORRECT_PASSWORD.strip():
         st.session_state.password_correct = True
         st.success("Password correct!")
