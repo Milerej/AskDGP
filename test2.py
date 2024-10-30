@@ -76,13 +76,18 @@ def check_password():
     if st.session_state.password_correct:
         return True
 
+    # Initialize password in session state if it doesn't exist
+    if 'password' not in st.session_state:
+        st.session_state.password = ''  # Initialize it as an empty string
+
     user_password = st.text_input("Password", type="password", key="password", on_change=check_password_submit)
 
     return st.session_state.password_correct
 
 def check_password_submit():
     """Function to handle password submission."""
-    if st.session_state.password.strip() == CORRECT_PASSWORD.strip():
+    # Ensure the password exists in session state before checking
+    if 'password' in st.session_state and st.session_state.password.strip() == CORRECT_PASSWORD.strip():
         st.session_state.password_correct = True
         st.success("Password correct!")
     else:
