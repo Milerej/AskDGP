@@ -8,7 +8,7 @@ from io import StringIO
 from fuzzywuzzy import process
 from collections import Counter
 import datetime
-import pytz  # Import pytz
+import pytz
 
 # Load environment variables
 load_dotenv()
@@ -17,7 +17,7 @@ AWS_ACCESS_KEY_ID = os.getenv("ACCESS_KEY")
 AWS_SECRET_ACCESS_KEY = os.getenv("SECRET_ACCESS_KEY")
 AWS_REGION = os.getenv("REGION_NAME")
 AWS_BUCKET = os.getenv("BUCKET_NAME")
-CORRECT_PASSWORD = os.getenv("PASSWORD")  # Make sure this is set in your environment
+CORRECT_PASSWORD = os.getenv("PASSWORD")
 
 # Initialize OpenAI API key
 openai.api_key = OPENAI_API_KEY
@@ -50,16 +50,13 @@ with st.expander("Disclaimer", expanded=False, icon="🚨"):
 
 # Function to read data from S3
 def read_data_from_s3(bucket_name, file_key):
-    """Read CSV data from an S3 bucket and return as a DataFrame."""
     try:
         response = s3.get_object(Bucket=bucket_name, Key=file_key)
         csv_content = response['Body'].read()
 
-        # Attempt to decode as UTF-8 first
         try:
             decoded_content = csv_content.decode('cp1252')
         except UnicodeDecodeError:
-            # If UTF-8 decoding fails, try ISO-8859-1
             decoded_content = csv_content.decode('ISO-8859-1')
 
         return pd.read_csv(StringIO(decoded_content))
@@ -69,7 +66,6 @@ def read_data_from_s3(bucket_name, file_key):
 
 # Function to check password
 def check_password():
-    """Returns True if the user has the correct password."""
     if 'password_correct' not in st.session_state:
         st.session_state.password_correct = False
 
@@ -77,11 +73,9 @@ def check_password():
         return True
 
     user_password = st.text_input("Password", type="password", key="password", on_change=check_password_submit)
-
     return st.session_state.password_correct
 
 def check_password_submit():
-    """Function to handle password submission."""
     if st.session_state.password.strip() == CORRECT_PASSWORD.strip():
         st.session_state.password_correct = True
         st.success("Password correct!")
@@ -107,15 +101,52 @@ if not all(col in data.columns for col in required_columns):
     st.error(f"Missing required columns in the data: {set(required_columns) - set(data.columns)}")
     st.stop()
 
-# Initialize messages and query counter in session state
+# Initialize messages, query counter, and processed query flag in session state
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "Hello there! Please enter your query to continue."}]
+    st.session_state.messages = [{"role": "assistant", "content": "Hello there! Please enter your query or click on any of the Frequently Asked Questions to continue."}]
 if "query_counter" not in st.session_state:
     st.session_state.query_counter = Counter()
+if "query_processed" not in st.session_state:
+    st.session_state.query_processed = False
+
+# Define keywords for each sub-category
+sub_category_keywords = {
+    "Advisories, Briefings and any other business matters": ["advisory", "briefing", "business matters", "billing", "annual fee", "subscription"],
+    "Application Access & Performance (including Migration to GCC+)": ["login", "access", "performance", "GCC"],
+    "Data / UI & Process/Workflow of Agency & System Management Modules": ["process", "workflow", "agency", "system", "system criticality", "sca", "risk materiality", "sml"],
+    "Data / UI Agency Health Check": ["health check", "cio reporting", "cio dashboard"],
+    "Data / UI of AIISA, IM8 Process Audit, IM8 VAPT Findings, UC & Internal Audit Modules": ["AIISA", "process audit", "VAPT", "findings", "internal audit"],
+    "Data / UI of CageScan Module": ["CageScan"],
+    "Data / UI of CISO Reporting Module": ["CISO"],
+    "Data / UI of Digital Service Module": ["digital service"],
+    "Data / UI of ICT Governance Module & MF Dashboards": ["ICT governance", "MF dashboards", "mf", "ministry family"],
+    "Data / UI of ICT Plan and Spend & PSIRC Module": ["plan", "spend", "PSIRC"],
+    "Data / UI of Integrated Risk Management Module": ["risk management", "IRM", "risk", "ra"],
+    "Data / UI of Policy, Standards and Guidelines": ["policy", "standards", "guidelines", "waiver"],
+    "Data / UI of Supplier Management Module": ["supplier management", "supplier", "vendor"],
+}
+
+# Modified function to determine sub-category
+def determine_sub_category(user_query, faq_term=None):
+    user_query_lower = user_query.lower()
+    matched_categories = []
+
+    # Check against the user query
+    for category, keywords in sub_category_keywords.items():
+        if any(keyword in user_query_lower for keyword in keywords):
+            matched_categories.append(category)
+
+    # If no match is found with the user query, check the FAQ term if provided
+    if not matched_categories and faq_term:
+        faq_term_lower = faq_term.lower()
+        for category, keywords in sub_category_keywords.items():
+            if any(keyword in faq_term_lower for keyword in keywords):
+                matched_categories.append(category)
+
+    return matched_categories[0] if matched_categories else "Uncategorized"
 
 # Function to chunk data into manageable pieces
 def chunk_data(data, chunk_size=5):
-    """Chunk a DataFrame into smaller DataFrames."""
     return [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
 
 # Set the timezone to Singapore Time (SGT)
@@ -146,7 +177,6 @@ def process_user_input(prompt):
         queries = data["Details of Query"].fillna('').astype(str).tolist() + data["Subject"].fillna('').astype(str).tolist()
         responses = data[["Reply", "Additional Comments"]].fillna('')
 
-        # Use a try-except to avoid IndexError
         try:
             matches = process.extract(prompt, queries, limit=None)
 
@@ -164,11 +194,7 @@ def process_user_input(prompt):
 
     context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in st.session_state.messages[-5:]])
     
-    # Get the current date and time in SGT
-    current_time_sgt = datetime.datetime.now(sgt_timezone).strftime("%Y-%m-%d %H:%M:%S")
-    
-    # Get response_msg from session state or set a default message if not available
-    response_msg = st.session_state.get('response_msg', 'No previous response available')
+    response_msg = st.session_state.get('assistant_response', 'No previous response available')
 
     ai_prompt = f"""
     You are a helpful and professional AI chatbot assistant. 
@@ -212,35 +238,21 @@ def process_user_input(prompt):
     - Exclude any references to specific individuals or organisations within the relevant replies extracted.
     - Is structured clearly, in a step-by-step manner, for easy understanding.
 
-    Always check if you have addressed the issue
-    If you do not have an answer, say so and instead offer to log a ticket.
-    
-    Show the summary in the main chat area in the following format after every reply    
-        **Summary**
-        1) Sub Category : [Select the most relevant category based on the user input. If there is no matching category, use "Advisories, Briefings and any other business matters"]
-            Advisories, Briefings and any other business matters
-            Application Access & Performance (including Migration to GCC+)
-            Data / UI & Process/Workflow of Agency & System Management Modules
-            Data / UI Agency Health Check
-            Data / UI of AIISA, IM8 Process Audit, IM8 VAPT Findings, UC & Internal Audit Modules
-            Data / UI of CageScan Module
-            Data / UI of CISO Reporting Module
-            Data / UI of Digital Service Module
-            Data / UI of ICT Governance Module & MF Dashboards
-            Data / UI of ICT Plan and Spend & PSIRC Module
-            Data / UI of Integrated Risk Management Module
-            Data / UI of Policy, Standards and Guidelines / Waiver Module
-            Data / UI of Supplier Management Module
-
-        2) Subject : [Summarise based on user's prompt]
-
-        3) Date/Time : {current_time_sgt}
-
-        4) Details of Query :
-            - User: {prompt}
-            - Assistant: {response_msg}
+    If you do not have an answer, say so and always check if you have addressed the issue.
+    If the issue is unresolved, offer to log a ticket following the steps below in your conversation
+    Step 1) User provide query or click on the frequently asked question
+    Step 2) Assistant provides a response and checks if the issue has been addressed and provides the "Submit ITSM ticket" button
+    Step 3) User clicks on the "Submit ITSM ticket" button
+    Step 4) Assistant provides confirmation message "Your ITSM ticket has been logged successfully!" and shows the summary based on the format below
+            **Summary**
+            1) Sub Category: [sub_category]
+            2) Subject: [user_query]
+            3) Date/Time: {datetime.datetime.now(sgt_timezone).strftime("%Y-%m-%d %H:%M:%S")}
+            4) Details of Query:
+                - User: [user_query]
+                - Assistant: [assistant_response]
     """
-    
+
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4o-mini",
@@ -248,6 +260,9 @@ def process_user_input(prompt):
             temperature=0.3
         )
         msg = response.choices[0].message.content.strip()
+        
+        # Store the response in session state
+        st.session_state['assistant_response'] = msg
     except Exception as e:
         msg = f"An error occurred: {str(e)}"
 
@@ -270,17 +285,16 @@ def generate_question(term):
         return question
     except Exception as e:
         st.error(f"Error generating question: {str(e)}")
-        return term  # Fallback to the term itself if there's an error
+        return term
 
 # Function to group similar subjects using fuzzy matching
 def group_similar_subjects(subjects, threshold=80):
-    """Group similar subjects based on a similarity threshold."""
     unique_subjects = []
     
     for subject in subjects:
         matches = process.extract(subject, unique_subjects, limit=None)
         if not matches or max([match[1] for match in matches]) < threshold:
-            unique_subjects.append(subject)  # Add as a new unique subject
+            unique_subjects.append(subject)
     
     return unique_subjects
 
@@ -299,6 +313,12 @@ with st.sidebar:
     for term in grouped_terms:
         question = generate_question(term)
         if st.button(question):
+            # Clear the session state for new enquiry
+            st.session_state.messages = [{"role": "assistant", "content": "Hello there! Please enter your query or click on any of the Frequently Asked Questions to continue."}]
+            st.session_state.query_counter = Counter()
+            st.session_state.query_processed = False
+            
+            # Add the question to messages and process input
             st.session_state.messages.append({"role": "user", "content": question})
             st.session_state.query_counter[question] += 1
             response_msg = process_user_input(question)
@@ -317,6 +337,39 @@ if page == "Ask DGP":
         with st.spinner("Processing your request..."):
             response_msg = process_user_input(prompt)
         st.session_state.messages.append({"role": "assistant", "content": response_msg})
+        
+        # Set the flag to indicate that a query has been processed
+        st.session_state.query_processed = True
+
+    # Display the "Submit ITSM ticket" button only if a query has been processed
+    if st.session_state.query_processed:
+        if st.button("Submit ITSM ticket"):
+            # Ensure user_query and assistant_response are defined
+            user_query = st.session_state.messages[-2]["content"]  # Get the last user query
+            assistant_response = st.session_state['assistant_response']  # Get the last assistant response
+            
+            # Check if the last message was a FAQ selection
+            faq_term = st.session_state.messages[-3]["content"] if len(st.session_state.messages) > 2 else None
+            
+            # Determine the sub-category based on user query or FAQ selection
+            choose_category = determine_sub_category(user_query, faq_term)
+
+            # Prepare the summary message
+            summary_msg = f"""
+**Summary**
+1) **Sub Category**: {choose_category}
+2) **Subject**: {user_query}
+3) **Date/Time**: {datetime.datetime.now(sgt_timezone).strftime("%Y-%m-%d %H:%M:%S")}
+4) **Details of Query**:
+   - User: {user_query}
+   - Assistant: {assistant_response}
+"""
+
+            # Display the confirmation message
+            st.chat_message("assistant").write("Your ITSM ticket has been logged successfully!")
+
+            # Display the summary message in the chat format
+            st.chat_message("assistant").write(summary_msg)
 
 # Content for About Us
 elif page == "About Us":
