@@ -370,7 +370,7 @@ if selected_page == "Ask DGP":
         
         # Summarize the subject based on manual input
         summarized_subject = summarize_user_input(prompt)
-        st.chat_message("assistant").write(f"**Subject:** {summarized_subject}")
+        #st.chat_message("assistant").write(f"**Subject:** {summarized_subject}")
 
         with st.spinner("Processing your request..."):
             response_msg = process_user_input(prompt)
