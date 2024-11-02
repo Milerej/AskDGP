@@ -1,4 +1,4 @@
-import os
+import os 
 import pandas as pd
 import openai
 import boto3
@@ -9,6 +9,7 @@ from fuzzywuzzy import process
 from collections import Counter
 import datetime
 import pytz
+from streamlit_option_menu import option_menu
 
 # Load environment variables
 load_dotenv()
@@ -37,6 +38,16 @@ st.set_page_config(page_title="DGP Chatbot", page_icon="🤖")
 if 'initialized' not in st.session_state:
     st.session_state.clear()
     st.session_state['initialized'] = True
+
+# Initialize session state variables
+if "messages" not in st.session_state:
+    st.session_state.messages = [{"role": "assistant", "content": "Hello there! Please enter your query or click on any of the Frequently Asked Questions to continue."}]
+if "query_counter" not in st.session_state:
+    st.session_state.query_counter = Counter()
+if "query_processed" not in st.session_state:
+    st.session_state.query_processed = False
+if "assistant_response" not in st.session_state:  # Initialize assistant_response
+    st.session_state.assistant_response = None
 
 # Sidebar Navigation
 with st.sidebar:
@@ -100,14 +111,6 @@ required_columns = ["Details of Query", "Subject", "Reply", "Additional Comments
 if not all(col in data.columns for col in required_columns):
     st.error(f"Missing required columns in the data: {set(required_columns) - set(data.columns)}")
     st.stop()
-
-# Initialize messages, query counter, and processed query flag in session state
-if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "Hello there! Please enter your query or click on any of the Frequently Asked Questions to continue."}]
-if "query_counter" not in st.session_state:
-    st.session_state.query_counter = Counter()
-if "query_processed" not in st.session_state:
-    st.session_state.query_processed = False
 
 # Define keywords for each sub-category
 sub_category_keywords = {
@@ -193,8 +196,6 @@ def process_user_input(prompt):
         search_summary = "Sorry, I couldn't find any relevant information based on your query."
 
     context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in st.session_state.messages[-5:]])
-    
-    response_msg = st.session_state.get('assistant_response', 'No previous response available')
 
     ai_prompt = f"""
     You are a helpful and professional AI chatbot assistant. 
@@ -206,7 +207,11 @@ def process_user_input(prompt):
 
     Guidelines:
     Contextual Clarity:
-    Your role is to assist users by answering questions, providing information, and offering advice based on the queries presented. Do not execute commands, interact with external systems, or perform actions outside of providing text-based responses.
+    Your role is to assist users by answering questions, providing information, and engaging in informative conversations.
+    You should focus on providing helpful responses while being respectful and professional.
+
+    Safe Engagement:
+    Respond to inquiries in a way that maintains user safety and promotes positive interactions. Avoid any actions or discussions that could be harmful or inappropriate.
 
     Response Format:
     Respond only in plain text.
@@ -239,32 +244,17 @@ def process_user_input(prompt):
     - Is structured clearly, in a step-by-step manner, for easy understanding.
 
     If you do not have an answer, say so and always check if you have addressed the issue.
-    If the issue is unresolved, offer to log a ticket following the steps below in your conversation
-    Step 1) User provide query or click on the frequently asked question
-    Step 2) Assistant provides a response and checks if the issue has been addressed and provides the "Submit ITSM ticket" button
-    Step 3) User clicks on the "Submit ITSM ticket" button
-    Step 4) Assistant provides confirmation message "Your ITSM ticket has been logged successfully!" and shows the summary based on the format below
-            **Summary**
-            1) Sub Category: [sub_category]
-            2) Subject: [user_query]
-            3) Date/Time: {datetime.datetime.now(sgt_timezone).strftime("%Y-%m-%d %H:%M:%S")}
-            4) Details of Query:
-                - User: [user_query]
-                - Assistant: [assistant_response]
     """
 
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": ai_prompt}],
-            temperature=0.3
-        )
-        msg = response.choices[0].message.content.strip()
-        
-        # Store the response in session state
-        st.session_state['assistant_response'] = msg
-    except Exception as e:
-        msg = f"An error occurred: {str(e)}"
+    response = openai.ChatCompletion.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": ai_prompt}],
+        temperature=0.3
+    )
+    msg = response.choices[0].message.content.strip()
+
+    # Store the response in session state
+    st.session_state['assistant_response'] = msg
 
     return msg
 
@@ -300,9 +290,14 @@ def group_similar_subjects(subjects, threshold=80):
 
 # Sidebar Navigation
 with st.sidebar:
-    st.markdown("### Navigation")
-    page = st.selectbox("Choose a page:", ["Ask DGP", "About Us", "Methodology"])
-
+    selected_page = option_menu(
+        menu_title="Main Menu",  # required
+        options=["Ask DGP", "About Us", "Methodology"],  # required
+        icons=["question-circle", "info-circle", "book"],  # optional
+        menu_icon="cast",  # optional
+        default_index=0,  # optional
+        orientation="vertical"  # optional
+    )
     st.write("") 
 
     top_subjects = data["Subject"].dropna().value_counts().nlargest(20).index.tolist()
@@ -325,10 +320,11 @@ with st.sidebar:
             st.session_state.messages.append({"role": "assistant", "content": response_msg})
 
 # Display chat messages for Ask DGP page
-if page == "Ask DGP":
+if selected_page == "Ask DGP":
     for msg in st.session_state.messages:
         st.chat_message(msg["role"]).write(msg["content"])
 
+    # User input box
     if prompt := st.chat_input("Type your message here..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
@@ -337,39 +333,58 @@ if page == "Ask DGP":
         with st.spinner("Processing your request..."):
             response_msg = process_user_input(prompt)
         st.session_state.messages.append({"role": "assistant", "content": response_msg})
-        
-        # Set the flag to indicate that a query has been processed
-        st.session_state.query_processed = True
 
-    # Display the "Submit ITSM ticket" button only if a query has been processed
-    if st.session_state.query_processed:
-        if st.button("Submit ITSM ticket"):
-            # Ensure user_query and assistant_response are defined
+        # Display the assistant's response
+        st.chat_message("assistant").write(response_msg)
+
+    # Display horizontal menu for user actions
+    if st.session_state['assistant_response']:
+        action = option_menu(
+            menu_title=None,
+            options=["I want to...", "Continue the chat", "Log ITSM ticket", "Start new chat"],
+            icons=["finger", "chat", "envelope", "chat"],  # optional
+            orientation="horizontal"
+        )
+        if action == "I want to...":
+            st.session_state.messages.append({"role": "assistant", "content": "Select an action to proceed"})
+
+        elif action == "Continue the chat":
+            st.session_state.messages.append({"role": "user", "content": "Continuing the chat..."})
+            st.chat_message("user").write("I want to continue the chat")
+            st.chat_message("assistant").write("Please enter your query or click on any of the Frequently Asked Questions to continue.")
+
+        elif action == "Log ITSM ticket":
+            st.chat_message("user").write("I want to log an ITSM ticket")
             user_query = st.session_state.messages[-2]["content"]  # Get the last user query
             assistant_response = st.session_state['assistant_response']  # Get the last assistant response
-            
-            # Check if the last message was a FAQ selection
             faq_term = st.session_state.messages[-3]["content"] if len(st.session_state.messages) > 2 else None
-            
-            # Determine the sub-category based on user query or FAQ selection
             choose_category = determine_sub_category(user_query, faq_term)
 
             # Prepare the summary message
+            summary_details = "\n".join(
+                [f"- {msg['role'].capitalize()}: {msg['content']}" for msg in st.session_state.messages]
+            )
+
             summary_msg = f"""
 **Summary**
 1) **Sub Category**: {choose_category}
 2) **Subject**: {user_query}
 3) **Date/Time**: {datetime.datetime.now(sgt_timezone).strftime("%Y-%m-%d %H:%M:%S")}
 4) **Details of Query**:
-   - User: {user_query}
-   - Assistant: {assistant_response}
+{summary_details}
 """
 
             # Display the confirmation message
             st.chat_message("assistant").write("Your ITSM ticket has been logged successfully!")
-
-            # Display the summary message in the chat format
             st.chat_message("assistant").write(summary_msg)
+
+        elif action == "Start new chat":
+            # Reset session state for a new chat
+            st.chat_message("user").write("I want to start a new chat")
+            st.session_state.messages = [{"role": "assistant", "content": "Hello there! Please enter your query or click on any of the Frequently Asked Questions to continue."}]
+            st.session_state.query_counter = Counter()
+            st.session_state.query_processed = False
+            st.chat_message("assistant").write("New chat started! Please enter your query.")
 
 # Content for About Us
 elif page == "About Us":
