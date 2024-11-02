@@ -312,7 +312,7 @@ with st.sidebar:
     selected_page = option_menu(
         menu_title="Main Menu",  # required
         options=["Ask DGP", "About Us", "Methodology"],  # required
-        icons=["question-circle", "info-circle", "book"],  # optional
+        icons=["robot", "info-circle", "book"],  # optional
         menu_icon="cast",  # optional
         default_index=0,  # optional
         orientation="vertical"  # optional
@@ -384,7 +384,7 @@ if selected_page == "Ask DGP":
         action = option_menu(
             menu_title=None,
             options=["I want to...", "Continue the chat", "Log ITSM ticket", "Start new chat"],
-            icons=["finger", "chat", "envelope", "chat"],  # optional
+            icons=["human", "chat", "envelope", "chat"],  # optional
             orientation="horizontal"
         )
         if action == "I want to...":
