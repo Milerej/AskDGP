@@ -46,7 +46,7 @@ if "query_counter" not in st.session_state:
     st.session_state.query_counter = Counter()
 if "query_processed" not in st.session_state:
     st.session_state.query_processed = False
-if "assistant_response" not in st.session_state:  # Initialize assistant_response
+if "assistant_response" not in st.session_state:
     st.session_state.assistant_response = None
 
 # Sidebar Navigation
@@ -350,6 +350,8 @@ if selected_page == "Ask DGP":
 
         elif action == "Continue the chat":
             st.session_state.messages.append({"role": "user", "content": "Continuing the chat..."})
+
+
             st.chat_message("user").write("I want to continue the chat")
             st.chat_message("assistant").write("Please enter your query or click on any of the Frequently Asked Questions to continue.")
 
@@ -387,7 +389,7 @@ if selected_page == "Ask DGP":
             st.chat_message("assistant").write("New chat started! Please enter your query.")
 
 # Content for About Us
-elif page == "About Us":
+elif selected_page == "About Us":
     st.title("About Us")
     st.write("""
              
@@ -468,8 +470,9 @@ The chatbot will include the following features:
     d) Augmentation for the Operations Team: The capacity to handle basic repetitive queries by filtering through past responses of similar nature.
     """)
 
+
 # Content for Methodology
-elif page == "Methodology":
+elif selected_page == "Methodology":
     st.title("Methodology")
     st.image('Flow1.PNG')
 
