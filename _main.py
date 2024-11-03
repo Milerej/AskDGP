@@ -40,15 +40,27 @@ if 'initialized' not in st.session_state:
     st.session_state.clear()
     st.session_state['initialized'] = True
 
-# Initialize session state variables
-if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "Hello there! Please enter your query or click on any of the Frequently Asked Questions to continue."}]
-if "query_counter" not in st.session_state:
+# Initialize session state variables if they don't exist
+if 'messages' not in st.session_state:
+    st.session_state.messages = [
+        {"role": "assistant", "content": "Hello there! Please enter your query or click on any of the Frequently Asked Questions to continue."}
+    ]
+if 'assistant_response' not in st.session_state:
+    st.session_state.assistant_response = True  # or some default value
+if 'initial_message_set' not in st.session_state:
+    st.session_state.initial_message_set = False  # Track if initial message has been set
+if 'query_counter' not in st.session_state:
     st.session_state.query_counter = Counter()
-if "query_processed" not in st.session_state:
+if 'query_processed' not in st.session_state:
     st.session_state.query_processed = False
-if "assistant_response" not in st.session_state:
-    st.session_state.assistant_response = None
+
+# Function to reset the conversation
+def reset_conversation():
+    st.session_state.messages = []  # Clear the chat history
+    st.session_state.conversation = None
+    st.session_state.chat_history = None
+    st.session_state.query_counter = Counter()  # Reset the query counter
+    st.session_state.query_processed = False  # Reset query processed status
 
 # Sidebar Navigation
 with st.sidebar:
@@ -378,6 +390,18 @@ if selected_page == "Ask DGP":
 
         # Display the assistant's response
         st.chat_message("assistant").write(response_msg)
+    
+    # Function to reset the conversation
+    def reset_conversation():
+        st.session_state.messages = []  # Clear the chat history
+        st.session_state.conversation = None
+        st.session_state.chat_history = None
+    
+    # Initialize session state variables if they don't exist
+    if 'messages' not in st.session_state:
+        st.session_state.messages = []
+    if 'assistant_response' not in st.session_state:
+        st.session_state.assistant_response = True  # or some default value
 
     # Display horizontal menu for user actions
     if st.session_state['assistant_response']:
@@ -426,167 +450,32 @@ if selected_page == "Ask DGP":
 4) **Details of Query**:
 {summary_details}
 """
-
+            
             # Display the confirmation message
             st.chat_message("assistant").write(summary_msg)
             st.chat_message("assistant").write("**Your ITSM ticket has been logged successfully!**")
 
+
         elif action == "Start new chat":
             # Reset session state for a new chat
+            reset_conversation()
+
+            # Add the initial message for new chat
             st.chat_message("user").write("I want to start a new chat")
-            st.session_state.messages = [{"role": "assistant", "content": "Hello there! Please enter your query or click on any of the Frequently Asked Questions to continue."}]
-            st.session_state.query_counter = Counter()
-            st.session_state.query_processed = False
-            st.chat_message("assistant").write("New chat started! Please enter your query.")
+            st.chat_message("assistant").write("**New chat started! Please enter your query.**")
+            
+            # Initialize with the assistant's greeting
+            initial_message = {
+                "role": "assistant",
+                "content": "Hello there! Please enter your query or click on any of the Frequently Asked Questions to continue."
+            }
+            st.chat_message("assistant").write(initial_message['content'])
+            st.session_state.messages.append(initial_message)
+
 
 # Content for About Us
 elif page == "About Us":
     st.title("About Us")
-    st.write("""
-             
-**1) Background**
-       """)   
-    st.write("""           
-The Digital Governance Platform (DGP) is designed to transform Whole-of-Government ICT and SS Governance, with the goal of effectively managing ICT risks and enhancing the delivery of digital services.
-The IT Service Management (ITSM) platform serves as the central system for agency users to report DGP-related issues or submit inquiries. Currently, a lean DGP Operations team manages initial ticket resolution by leveraging their expertise, historical responses, and available resources. Complex issues are escalated to Subject Matter Experts (SMEs), including Product Teams, Process Owners, Module Owners, and Technical Teams.
-This process heavily relies on manual intervention to review historical responses to similar inquiries. Additionally, it may require referencing relevant resources (e.g., manuals, user guides, forms, notices, and announcements) available on the DGP Portal, which can be time-consuming and inefficient.
-    """)    
-    st.write("""
-         """)       
-    st.write("""   
-                      
-**2) Problem Statement**
-                 """)  
-    st.write(""" 
-How can we streamline the ITSM inquiry process to:
-                 """) 
-    st.write(""" 
-    a) Provide prompt and accurate responses to inquiries.
-                 """)         
-    st.write(""" 
-    b) Reduce manual workload and enhance operational efficiency.
-    """)      
-    st.write("""
-         """)    
-    st.write("""   
-                       
-**3) Proposed Solution**
-                 """)        
-    st.write(""" 
-By implementing a Large Language Model (LLM) to handle inquiries, we believe that the proof of concept (POC) can address repetitive ITSM queries, which constitute at least 60% of the ITSM tickets received. This initiative will enable:
-                 """)       
-    st.write(""" 
-    a) Agency users to quickly resolve their concerns.
-                 """)        
-    st.write(""" 
-    b) The Operations Team to focus on more complex and critical queries and tasks.
-    """)   
-    st.write("""
-         """)       
-    st.write(""" 
-                        
-**4) Role of the LLM in the Solution**
-                 """)        
-    st.write(""" 
-Utilizing the capabilities of the LLM, it can replicate the Operations Team's ability to provide clarity and address agency users' inquiries based on relevant resources (e.g., advisories, circulars, user guides, functional specifications, and FAQs). For unresolved and complex queries, the LLM can recommend logging a ticket at the end of the session, ensuring that the Operations Team and SMEs follow up on these issues. Continuous enhancement can be achieved by updating the LLM with data from resolved complex issues, thereby reducing the need for manual intervention by the Operations Team and SMEs.
-     """) 
-    st.write("""
-         """)        
-    st.write("""  
-                     
-**5) Relevant Data Collected**
-                 """)          
-    st.write(""" 
-The data utilized for this POC primarily originates from the ITSM. It has been anonymized and desensitized using the Cloak.
-    """)  
-    st.write("""
-         """)      
-    st.write("""            
-             
-**6) Features**
-                 """)          
-    st.write(""" 
-The chatbot will include the following features:
-                 """)          
-    st.write(""" 
-    a) Natural Language Processing (NLP): The ability to understand, interpret, and communicate in human language.
-                 """)         
-    st.write(""" 
-    b) Clarity of Issues and Problems: The capability to delve deeper into users' questions by asking follow-up queries.
-                 """)       
-    st.write(""" 
-    c) Contextualized Resolution: The ability to identify the user's intent and respond based on the interaction, providing tailored replies to resolve inquiries.
-                 """)       
-    st.write(""" 
-    d) Augmentation for the Operations Team: The capacity to handle basic repetitive queries by filtering through past responses of similar nature.
-    """)
-
 # Content for Methodology
 elif page == "Methodology":
     st.title("Methodology")
-    st.image('Flow1.PNG')
-
-    st.write('''
-             
-**Use Case 1**
-    ''')
-
-    st.write(''' 
-Scenario: Users encounter difficulties in updating a record within Digital Governance Platform (DGP) and seek clarification on the update process. They turn to the DGP chatbot for assistance.
-    ''')
-
-    st.write(''' 
-User Intent: Users want to understand how to carry out updates but encounter uncertainty regarding the inability to perform the update.
-    ''')
-
-    st.write(''' 
-Chatbot Response: Within the sidebar, the chatbot offers a section titled "Frequently Asked Questions." Users can easily select their specific query from a predefined list, streamlining the process of obtaining assistance.
-    ''')
-
-    st.write(''' 
-Outcome: Users receive immediate and relevant information regarding their inquiry, without the need to type out the query. This efficient interaction reduces frustration and improves user satisfaction, while also minimizing the need for further clarifications or escalation.
-    ''')
-    st.write("""
-         """) 
-    st.write('''  
-                                    
-**Use Case 2**
-                 ''')
-
-    st.write(''' 
-Scenario: Users encounter difficulties in updating a record within DGP and seek clarification on the update process. They turn to the DGP chatbot for assistance.
-                 ''')
-
-    st.write(''' 
-User Intent: Users want to understand how to carry out updates but encounter uncertainty regarding the inability to perform the update.
-                 ''')
-
-    st.write(''' 
-Chatbot Response: The chatbot effectively addresses the user's inquiry by informing them that the system is currently locked for updates due to an ongoing exercise. This response not only clarifies the situation but also manages user expectations by explaining the reason for the system's unavailability.
-                 ''')
-
-    st.write(''' 
-Outcome: Users gain a clear understanding of the constraints affecting their ability to perform updates, thereby reducing frustration and enhancing their overall experience with the system.
-    ''')
-    st.write("""
-         """) 
-    st.write(''' 
-                     
-**Use Case 3**
-                 ''')
-
-    st.write(''' 
-Scenario: Users encounter difficulties in updating a record within DGP and seek clarification on the update process. They turn to the DGP chatbot for assistance.
-                 ''')
-
-    st.write(''' 
-User Intent: Users want to understand how to carry out updates but encounter uncertainty regarding the inability to perform the update.
-                 ''')
-
-    st.write(''' 
-Chatbot Response: After several rounds of clarifications, the chatbot is unable to provide a satisfactory answer to the user's inquiry. In response, it offers to assist the user in logging a case with the helpdesk, ensuring that their issue is escalated for further resolution.
-                 ''')
-
-    st.write(''' 
-Outcome: The chatbot  redirected Users to the helpdesk for personalized support by logging a ticket on behalf of the user based on the conversation. This approach not only enhances user satisfaction but also maintains the chatbot's role as a facilitator for more complex issues, ultimately improving the overall user experience with the DGP system. 
-    ''')
