@@ -480,7 +480,7 @@ if selected_page == "Ask DGP":
 
 
 # Content for About Us
-elif page == "About Us":
+elif selected_page == "About Us":
     st.title("About Us")
     st.write("""
              
@@ -562,7 +562,7 @@ The chatbot will include the following features:
     """)
 
 # Content for Methodology
-elif page == "Methodology":
+elif selected_page == "Methodology":
     st.title("Methodology")
     st.image('Flow1.PNG')
 
