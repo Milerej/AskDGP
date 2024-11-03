@@ -58,13 +58,13 @@ with st.sidebar:
 st.title("Digital Governance Platform (DGP) Chatbot")
 st.caption("A Streamlit chatbot powered by Govtech")
 with st.expander("Disclaimer", expanded=False, icon="🚨"):
-    st.write('''IMPORTANT NOTICE: This web application is developed as a proof-of-concept prototype. The information provided here is NOT intended for actual usage and should not be relied upon for making any decisions, especially those related to financial, legal, or healthcare matters.
+    st.write('''**IMPORTANT NOTICE**: This web application is developed as a proof-of-concept prototype. The information provided here is **NOT intended for actual usage** and should not be relied upon for making any decisions, especially those related to financial, legal, or healthcare matters.
 
-Furthermore, please be aware that the LLM may generate inaccurate or incorrect information. You assume full responsibility for how you use any generated output.
+**Furthermore, please be aware that the LLM may generate inaccurate or incorrect information. You assume full responsibility for how you use any generated output.**
 
 Always consult with qualified professionals for accurate and personalized advice.
 
-"""''')
+''')
 
 # Function to read data from S3
 def read_data_from_s3(bucket_name, file_key):
