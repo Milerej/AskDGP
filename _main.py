@@ -357,21 +357,32 @@ with st.sidebar:
             response_msg = process_user_input(question)
             st.session_state.messages.append({"role": "assistant", "content": response_msg})
 
+
+
+
 # Display chat messages for Ask DGP page
 if selected_page == "Ask DGP":
-    for msg in st.session_state.messages:
-        st.chat_message(msg["role"]).write(msg["content"])
+    # Ensure messages are initialized
+    if 'messages' not in st.session_state:
+        st.session_state.messages = []
+    
+    # Initialize action state if it doesn't exist
+    if 'selected_action' not in st.session_state:
+        st.session_state.selected_action = "I want to..."  # Set a default action
+
+    # User input box and chat display
+    if st.session_state.messages:  # Only display chat if there are messages
+        for msg in st.session_state.messages:
+            st.chat_message(msg["role"]).write(msg["content"])
 
     # User input box
     if prompt := st.chat_input("Type your message here..."):
+        # Append user input to messages
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.chat_message("user").write(prompt)
         st.session_state.query_counter[prompt] += 1
         
-        # Summarize the subject based on manual input
-        summarized_subject = summarize_user_input(prompt)
-        #st.chat_message("assistant").write(f"**Subject:** {summarized_subject}")
-
+        # Process user input
         with st.spinner("Processing your request..."):
             response_msg = process_user_input(prompt)
         st.session_state.messages.append({"role": "assistant", "content": response_msg})
@@ -380,39 +391,36 @@ if selected_page == "Ask DGP":
         st.chat_message("assistant").write(response_msg)
 
     # Display horizontal menu for user actions
-    if st.session_state['assistant_response']:
-        action = option_menu(
-            menu_title=None,
+    if st.session_state.get('assistant_response'):
+        nested_action = option_menu(
+            menu_title="What would you like to do?",
             options=["I want to...", "Continue the chat", "Log ITSM ticket", "Start new chat"],
-            icons=["human", "chat", "envelope", "chat"],  # optional
-            orientation="horizontal"
+            icons=["human", "chat", "envelope", "chat"],
+            orientation="horizontal",
+            default_index=["I want to...", "Continue the chat", "Log ITSM ticket", "Start new chat"].index(st.session_state.selected_action)  # Set the default index
         )
-        if action == "I want to...":
-            st.session_state.messages.append({"role": "assistant", "content": "Select an action to proceed"})
 
-        elif action == "Continue the chat":
-            st.session_state.messages.append({"role": "user", "content": "Continuing the chat..."})
+        # Handle actions based on user selection
+        if nested_action == "I want to...":
+            st.session_state.selected_action = "I want to..."
 
-
-            st.chat_message("user").write("I want to continue the chat")
+        elif nested_action == "Continue the chat":
             st.chat_message("assistant").write("Please enter your query or click on any of the Frequently Asked Questions to continue.")
+            st.session_state.selected_action = "Continue the chat"
 
-        elif action == "Log ITSM ticket":
+        elif nested_action == "Log ITSM ticket":
             st.chat_message("user").write("I want to log an ITSM ticket")
-            user_query = st.session_state.messages[-2]["content"]  # Get the last user query
-            assistant_response = st.session_state['assistant_response']  # Get the last assistant response
-            faq_term = st.session_state.messages[-3]["content"] if len(st.session_state.messages) > 2 else None
+            user_query = st.session_state.messages[-2]["content"] if len(st.session_state.messages) > 1 else "No previous user query."
+            assistant_response = st.session_state.get('assistant_response', "No previous assistant response.")
+            faq_term = st.session_state.messages[-3]["content"] if len(st.session_state.messages) > 2 else "No FAQ term."
+
             choose_category = determine_sub_category(user_query, faq_term)
 
-            # Prepare the summary message
             summary_details = "\n".join(
                 [f"- {msg['role'].capitalize()}: {msg['content']}" for msg in st.session_state.messages]
             )
 
-            # Collect all user inputs from the conversation
             user_inputs = [msg["content"] for msg in st.session_state.messages if msg["role"] == "user"]
-
-            # Join all user inputs into a single string
             all_user_query = "\n".join(user_inputs)
 
             summary_msg = f"""
@@ -427,17 +435,55 @@ if selected_page == "Ask DGP":
 {summary_details}
 """
 
-            # Display the confirmation message
             st.chat_message("assistant").write(summary_msg)
             st.chat_message("assistant").write("**Your ITSM ticket has been logged successfully!**")
+            
+            # New option menu after ticket is logged
+            post_ticket_action = option_menu(
+                menu_title="What would you like to do next?",
+                options=["I want to...", "Continue the chat", "Start new chat"],
+                icons=["user", "chat", "chat"],
+                orientation="horizontal"
+            )
+            if post_ticket_action == "I want to...":
+                st.session_state.selected_action = "I want to..."
 
-        elif action == "Start new chat":
-            # Reset session state for a new chat
-            st.chat_message("user").write("I want to start a new chat")
-            st.session_state.messages = [{"role": "assistant", "content": "Hello there! Please enter your query or click on any of the Frequently Asked Questions to continue."}]
-            st.session_state.query_counter = Counter()
-            st.session_state.query_processed = False
-            st.chat_message("assistant").write("New chat started! Please enter your query.")
+            elif post_ticket_action == "Continue the chat":
+                st.chat_message("assistant").write("Please enter your query to continue the conversation.")
+                st.session_state.selected_action = "Continue the chat"
+
+            elif post_ticket_action == "Start new chat":
+                # Clear chat history and reset state immediately
+                st.session_state.messages = []
+                st.session_state.selected_action = "I want to..."  # Reset selected action
+                st.chat_message("assistant").write("**New chat started! Please enter your query or click on another question from the 'Frequently Asked Questions' section on the side bar.**")
+
+        elif nested_action == "Start new chat":
+            # Clear chat history and reset state immediately
+            st.session_state.messages = []
+            st.session_state.selected_action = "I want to..."  # Reset selected action
+            start_new_chat_action = option_menu(
+                menu_title="Are you sure you want to start a new chat and erase the chat history?",
+                options=["I want to...", "Continue the chat", "Start new chat"],
+                icons=["user", "chat", "chat"],
+                orientation="horizontal"
+            )
+
+            if start_new_chat_action == "I want to...":
+                st.session_state.selected_action = "I want to..."
+
+            elif start_new_chat_action == "Continue the chat":
+                st.chat_message("assistant").write("Please enter your query to continue the conversation.")
+                st.session_state.selected_action = "Continue the chat"
+
+            elif start_new_chat_action == "Start new chat":
+                # Clear chat history and reset state
+                st.session_state.messages = []
+                st.session_state.selected_action = "I want to..."  # Reset selected action
+                st.session_state.messages.append({"role": "assistant", "content": "Hello there! Please enter your query or click on any of the Frequently Asked Questions to continue."})
+                st.chat_message("assistant").write("**New chat started! Please enter your query or click on another question from the 'Frequently Asked Questions' section on the side bar.**")
+
+
 
 # Content for About Us
 elif page == "About Us":
