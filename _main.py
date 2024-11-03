@@ -394,8 +394,8 @@ if selected_page == "Ask DGP":
     if st.session_state.get('assistant_response'):
         nested_action = option_menu(
             menu_title="What would you like to do?",
-            options=["I want to...", "Continue the chat", "Log ITSM ticket", "Start new chat"],
-            icons=["human", "chat", "envelope", "chat"],
+            options=["I want to...", "Log ITSM ticket", "Start new chat"],
+            icons=["human", "envelope", "chat"],
             orientation="horizontal",
             default_index=["I want to...", "Continue the chat", "Log ITSM ticket", "Start new chat"].index(st.session_state.selected_action)  # Set the default index
         )
@@ -403,10 +403,6 @@ if selected_page == "Ask DGP":
         # Handle actions based on user selection
         if nested_action == "I want to...":
             st.session_state.selected_action = "I want to..."
-
-        elif nested_action == "Continue the chat":
-            st.chat_message("assistant").write("Please enter your query or click on any of the Frequently Asked Questions to continue.")
-            st.session_state.selected_action = "Continue the chat"
 
         elif nested_action == "Log ITSM ticket":
             st.chat_message("user").write("I want to log an ITSM ticket")
@@ -441,16 +437,12 @@ if selected_page == "Ask DGP":
             # New option menu after ticket is logged
             post_ticket_action = option_menu(
                 menu_title="What would you like to do next?",
-                options=["I want to...", "Continue the chat", "Start new chat"],
-                icons=["user", "chat", "chat"],
+                options=["I want to...", "Start new chat"],
+                icons=["user", "chat"],
                 orientation="horizontal"
             )
             if post_ticket_action == "I want to...":
                 st.session_state.selected_action = "I want to..."
-
-            elif post_ticket_action == "Continue the chat":
-                st.chat_message("assistant").write("Please enter your query to continue the conversation.")
-                st.session_state.selected_action = "Continue the chat"
 
             elif post_ticket_action == "Start new chat":
                 # Clear chat history and reset state immediately
@@ -464,17 +456,13 @@ if selected_page == "Ask DGP":
             st.session_state.selected_action = "I want to..."  # Reset selected action
             start_new_chat_action = option_menu(
                 menu_title="Are you sure you want to start a new chat and erase the chat history?",
-                options=["I want to...", "Continue the chat", "Start new chat"],
-                icons=["user", "chat", "chat"],
+                options=["I want to...", "Start new chat"],
+                icons=["user", "chat"],
                 orientation="horizontal"
             )
 
             if start_new_chat_action == "I want to...":
                 st.session_state.selected_action = "I want to..."
-
-            elif start_new_chat_action == "Continue the chat":
-                st.chat_message("assistant").write("Please enter your query to continue the conversation.")
-                st.session_state.selected_action = "Continue the chat"
 
             elif start_new_chat_action == "Start new chat":
                 # Clear chat history and reset state
@@ -486,7 +474,7 @@ if selected_page == "Ask DGP":
 
 
 # Content for About Us
-elif selected_page == "About Us":
+elif page == "About Us":
     st.title("About Us")
     st.write("""
              
@@ -568,7 +556,7 @@ The chatbot will include the following features:
     """)
 
 # Content for Methodology
-elif selected_page == "Methodology":
+elif page == "Methodology":
     st.title("Methodology")
     st.image('Flow1.PNG')
 
